@@ -58,7 +58,7 @@ const SECTIONS: { label: string | null; items: NavItem[] }[] = [
       { href: '/clients', label: 'Clients', icon: Building2 },
       { href: '/team', label: 'Team', icon: Users },
       { href: '/chat', label: 'Chat', icon: MessagesSquare, badgeKind: 'chat' },
-      { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true, badgeKind: 'whatsapp' },
+      { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, badgeKind: 'whatsapp' },
     ],
   },
   {

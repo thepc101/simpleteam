@@ -50,15 +50,7 @@ export default function WhatsAppPage() {
     [template, currentWorkspace?.name],
   )
 
-  if (!isAdmin || !currentWorkspace) {
-    return (
-      <div className="card flex flex-col items-center gap-2 py-16 text-center">
-        <ShieldAlert className="h-8 w-8 text-slate-300" />
-        <p className="font-medium">Admins only</p>
-        <p className="text-sm text-slate-400">WhatsApp automation is managed by workspace admins.</p>
-      </div>
-    )
-  }
+  if (!currentWorkspace) return null
 
   const enabled = currentWorkspace.wa_enabled
 
@@ -90,6 +82,18 @@ export default function WhatsAppPage() {
         </p>
       </div>
 
+      {!isAdmin && (
+        <div className="flex gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-slate-500 dark:border-slate-800 dark:bg-slate-800/40">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <p className="text-xs leading-relaxed">
+            Automation, templates and sending are managed by workspace admins. You can review the
+            sent history below.
+          </p>
+        </div>
+      )}
+
+      {isAdmin && (
+        <>
       {/* Default template + toggle */}
       <div className="card p-5">
         <div className="flex items-center justify-between">
@@ -233,6 +237,8 @@ export default function WhatsAppPage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Sent log */}
       <div className="card p-5">
