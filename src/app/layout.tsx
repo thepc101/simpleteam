@@ -1,14 +1,19 @@
 import type { Metadata, Viewport } from 'next'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { AppProvider } from '@/lib/store'
 
 export const metadata: Metadata = {
   title: 'SimpleTeam — Task management, simplified',
-  description: 'Asana, but simpler. Fast task management with roles, a backlog and a built-in Indian compliance reference.',
+  description: 'A fast, clean task & compliance workspace for chartered accountancy firms.',
 }
 
 export const viewport: Viewport = {
-  themeColor: '#6366f1',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fafafa' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
   width: 'device-width',
   initialScale: 1,
 }
@@ -26,11 +31,11 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body style={{ fontFamily: 'var(--font-sans)' }}>
+      <body>
         <AppProvider>{children}</AppProvider>
       </body>
     </html>

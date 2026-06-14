@@ -120,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           return (
             <div key={i}>
               {section.label && !mini && <p className="section-label">{section.label}</p>}
-              {section.label && mini && i > 0 && <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />}
+              {section.label && mini && i > 0 && <div className="my-1.5 border-t border-[var(--border)]" />}
               {items.map((item) => {
                 const isActive = pathname.startsWith(item.href)
                 const Icon = item.icon
@@ -172,7 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onAction?.()
               logout()
             }}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--fg-subtle)] hover:bg-[var(--surface-2)] hover:text-rose-500"
             aria-label="Sign out"
             title="Sign out"
           >
@@ -182,7 +182,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )
     }
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
+      <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
         <Avatar user={currentUser} size={36} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1 truncate text-sm font-semibold">
@@ -198,7 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onAction?.()
             logout()
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-rose-600 dark:hover:bg-slate-700"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--fg-subtle)] hover:bg-[var(--surface)] hover:text-rose-500"
           aria-label="Sign out"
         >
           <LogOut className="h-4 w-4" />
@@ -212,7 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-slate-200 bg-white p-3 transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 lg:flex',
+          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-[var(--border)] bg-[var(--surface)] p-3 transition-[width] duration-200 lg:flex',
           collapsed ? 'w-[68px]' : 'w-64',
         )}
       >
@@ -223,7 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <>
               <Brand />
               {currentWorkspace && (
-                <p className="mt-2 line-clamp-2 px-0.5 text-xs font-medium leading-snug text-slate-400">
+                <p className="mt-2 line-clamp-2 px-0.5 text-xs font-medium leading-snug text-[var(--fg-subtle)]">
                   {currentWorkspace.name}
                 </p>
               )}
@@ -248,19 +248,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-xl animate-slide-up dark:border-slate-800 dark:bg-slate-900">
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl animate-slide-up">
             <div className="flex items-start justify-between">
               <div className="px-1 py-2">
                 <Brand />
                 {currentWorkspace && (
-                  <p className="mt-2 line-clamp-2 px-0.5 text-xs font-medium leading-snug text-slate-400">
+                  <p className="mt-2 line-clamp-2 px-0.5 text-xs font-medium leading-snug text-[var(--fg-subtle)]">
                     {currentWorkspace.name}
                   </p>
                 )}
               </div>
               <button
                 onClick={() => setDrawer(false)}
-                className="mt-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="mt-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--fg-subtle)] hover:bg-[var(--surface-2)]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -275,10 +275,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main column */}
       <div className={cn('transition-[padding] duration-200', collapsed ? 'lg:pl-[68px]' : 'lg:pl-64')}>
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80 sm:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-4 backdrop-blur-md sm:px-6">
           <button
             onClick={() => setDrawer(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--fg-muted)] hover:bg-[var(--surface-2)] lg:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />

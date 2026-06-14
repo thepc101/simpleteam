@@ -13,14 +13,15 @@ export function MadeBy() {
   if (hidden) return null
 
   return (
-    <div className="fixed bottom-3 right-3 z-40 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs text-slate-500 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
+    <div className="fixed bottom-3 right-3 z-40 flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs shadow-sm backdrop-blur" style={{ color: 'var(--fg-muted)' }}>
       <a
         href="https://thepc101.github.io"
         target="_blank"
         rel="noreferrer"
-        className="transition hover:text-slate-700 dark:hover:text-slate-300"
+        className="transition hover:opacity-80"
+        style={{ color: 'var(--fg)' }}
       >
-        Made by <span className="font-semibold accent-text">thepc101</span>
+        Made by <span className="font-semibold">thepc101</span>
       </a>
       <button
         onClick={() => {
@@ -31,7 +32,8 @@ export function MadeBy() {
             /* ignore */
           }
         }}
-        className="ml-0.5 text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-300"
+        className="ml-0.5 transition hover:opacity-70"
+        style={{ color: 'var(--fg-subtle)' }}
         aria-label="Dismiss"
       >
         <X className="h-3 w-3" />
