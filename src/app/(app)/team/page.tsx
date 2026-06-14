@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Crown, Mail, Shield, User as UserIcon } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Check, Crown, Mail, Shield, User as UserIcon, UserPlus, X } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import type { Role } from '@/lib/types'
 import { ROLE_LABELS } from '@/lib/types'
@@ -16,8 +16,10 @@ const ROLE_STYLE: Record<Role, string> = {
 const ROLE_ICON: Record<Role, typeof Crown> = { admin: Crown, leader: Shield, standard: UserIcon }
 
 export default function TeamPage() {
-  const { users, tasks, currentUser, currentWorkspace, isAdmin, updateUserRole } = useApp()
+  const { users, tasks, currentUser, currentWorkspace, isAdmin, updateUserRole, joinRequests, approveJoin, rejectJoin } = useApp()
   const ownerId = currentWorkspace?.owner_id
+  const [reqRole, setReqRole] = useState<Record<string, Role>>({})
+  const pending = joinRequests.filter((r) => r.status === 'pending')
 
   const rows = useMemo(
     () =>
@@ -50,6 +52,43 @@ export default function TeamPage() {
         </p>
       )}
 
+      {isAdmin && pending.length > 0 && (
+        <div className="card p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <UserPlus className="h-4 w-4" /> Join requests
+            <span className="chip bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">{pending.length}</span>
+          </h3>
+          <div className="mt-3 space-y-2">
+            {pending.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--border)] p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {r.full_name || r.email}
+                    {r.username && <span className="ml-1.5 text-xs" style={{ color: 'var(--fg-subtle)' }}>@{r.username}</span>}
+                  </p>
+                  <p className="truncate text-xs" style={{ color: 'var(--fg-subtle)' }}>{r.email}</p>
+                </div>
+                <select
+                  value={reqRole[r.id] ?? 'standard'}
+                  onChange={(e) => setReqRole((s) => ({ ...s, [r.id]: e.target.value as Role }))}
+                  className="input w-auto !py-1 text-xs"
+                >
+                  <option value="standard">Member</option>
+                  <option value="leader">Team Leader</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button onClick={() => approveJoin(r.id, reqRole[r.id] ?? 'standard')} className="btn-primary btn-sm">
+                  <Check className="h-3.5 w-3.5" /> Approve
+                </button>
+                <button onClick={() => rejectJoin(r.id)} className="btn-outline btn-sm">
+                  <X className="h-3.5 w-3.5" /> Reject
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map(({ user, open, done }) => {
           const isUserOwner = user.id === ownerId
@@ -62,7 +101,8 @@ export default function TeamPage() {
                 <Avatar user={user} size={44} />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate font-semibold">
-                    {user.full_name}
+                    {user.full_name || user.email}
+                    {user.username && <span className="text-xs font-normal" style={{ color: 'var(--fg-subtle)' }}>@{user.username}</span>}
                     {isSelf && <span className="text-xs font-normal text-slate-400">(you)</span>}
                   </p>
                   <p className="flex items-center gap-1 truncate text-xs text-slate-400">

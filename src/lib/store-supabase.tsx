@@ -3,7 +3,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AppCtx, type AppContextValue } from './app-context'
 import { supabase } from './supabaseClient'
-import type { ChatMessage, Client, Comment, Task, User, WaNotification, Workspace } from './types'
+import type {
+  ChatMessage,
+  Client,
+  Comment,
+  JoinRequest,
+  Task,
+  User,
+  WaNotification,
+  Workspace,
+} from './types'
 import { generateInviteCode, sanitizePhone } from './crypto'
 import { pickAvatarColor } from './utils'
 import { buildMessage } from './whatsapp'
@@ -16,6 +25,7 @@ interface DB {
   comments: Comment[]
   messages: ChatMessage[]
   notifications: WaNotification[]
+  joinRequests: JoinRequest[]
 }
 const EMPTY_DB: DB = {
   workspace: null,
@@ -25,6 +35,7 @@ const EMPTY_DB: DB = {
   comments: [],
   notifications: [],
   messages: [],
+  joinRequests: [],
 }
 
 const TABLE_KEY: Record<string, keyof DB> = {
@@ -34,6 +45,7 @@ const TABLE_KEY: Record<string, keyof DB> = {
   comments: 'comments',
   messages: 'messages',
   notifications: 'notifications',
+  join_requests: 'joinRequests',
 }
 
 const uuid = () => crypto.randomUUID()
@@ -101,16 +113,27 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       })
     }
 
-    function subscribe(wsId: string) {
+    function subscribe(wsId: string, userId: string) {
       if (channel) sb.removeChannel(channel)
       channel = sb.channel(`ws-${wsId}`)
-      for (const table of ['profiles', 'clients', 'tasks', 'comments', 'messages', 'notifications', 'workspaces']) {
+      for (const table of ['profiles', 'clients', 'tasks', 'comments', 'messages', 'notifications', 'workspaces', 'join_requests']) {
         channel.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter: table === 'workspaces' ? `id=eq.${wsId}` : `workspace_id=eq.${wsId}` },
           (payload) => applyChange(table, payload as unknown as { eventType: string; new: unknown; old: unknown }),
         )
       }
+      channel.subscribe()
+      void userId
+    }
+
+    // For a signed-in user with no team yet: watch their own profile + join requests
+    // so they enter automatically the moment an owner approves them.
+    function subscribePending(userId: string) {
+      if (channel) sb.removeChannel(channel)
+      channel = sb.channel(`pending-${userId}`)
+      channel.on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, () => loadFor(userId))
+      channel.on('postgres_changes', { event: '*', schema: 'public', table: 'join_requests', filter: `user_id=eq.${userId}` }, () => loadFor(userId))
       channel.subscribe()
     }
 
@@ -124,13 +147,15 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       }
       const wsId = (prof as User).workspace_id
       if (!wsId) {
-        // Signed in but no team yet → onboarding will create/join one.
+        // Signed in but no team yet → onboarding (create or request to join).
+        const { data: reqs } = await sb.from('join_requests').select('*').eq('user_id', userId)
         setMe(prof as User)
-        setDb(EMPTY_DB)
+        setDb({ ...EMPTY_DB, joinRequests: (reqs as JoinRequest[]) ?? [] })
         setReady(true)
+        subscribePending(userId)
         return
       }
-      const [ws, users, clients, tasks, comments, messages, notifications] = await Promise.all([
+      const [ws, users, clients, tasks, comments, messages, notifications, joinRequests] = await Promise.all([
         sb.from('workspaces').select('*').eq('id', wsId).maybeSingle(),
         sb.from('profiles').select('*').eq('workspace_id', wsId),
         sb.from('clients').select('*').eq('workspace_id', wsId),
@@ -138,6 +163,7 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
         sb.from('comments').select('*').eq('workspace_id', wsId),
         sb.from('messages').select('*').eq('workspace_id', wsId),
         sb.from('notifications').select('*').eq('workspace_id', wsId),
+        sb.from('join_requests').select('*').eq('workspace_id', wsId),
       ])
       setMe(prof as User)
       setDb({
@@ -148,9 +174,10 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
         comments: (comments.data as Comment[]) ?? [],
         messages: (messages.data as ChatMessage[]) ?? [],
         notifications: (notifications.data as WaNotification[]) ?? [],
+        joinRequests: (joinRequests.data as JoinRequest[]) ?? [],
       })
       setReady(true)
-      subscribe(wsId)
+      subscribe(wsId, userId)
     }
     loadRef.current = loadFor
 
@@ -197,6 +224,8 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
     messages: db.messages,
     notifications: [...db.notifications].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)),
     pendingNotifications: db.notifications.filter((n) => n.status === 'pending').length,
+    joinRequests: db.joinRequests,
+    myJoinRequest: me ? db.joinRequests.find((r) => r.user_id === me.id && r.status === 'pending') ?? null : null,
     userById: (id) => (id ? db.users.find((u) => u.id === id) : undefined),
     clientById: (id) => (id ? db.clients.find((c) => c.id === id) : undefined),
     commentsFor: (taskId) =>
@@ -218,34 +247,57 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email: input.email.trim(),
         password: input.password,
-        options: {
-          data: {
-            full_name: input.full_name.trim(),
-            avatar_color: pickAvatarColor(input.email),
-          },
-        },
+        options: { data: { avatar_color: pickAvatarColor(input.email) } },
       })
       if (error) return { ok: false, error: error.message }
       if (!data.session)
         return { ok: false, error: 'Account created — please confirm your email, then sign in. (Tip: disable email confirmation in Supabase for instant access.)' }
       return { ok: true }
     },
-    createWorkspace: async (name) => {
+    createWorkspace: async (name, fullName, username) => {
       if (!supabase || !me) return { ok: false, error: 'Not signed in.' }
+      if (!fullName.trim()) return { ok: false, error: 'Please enter your full name.' }
       if (!name.trim()) return { ok: false, error: 'Please name your team.' }
-      const { error } = await supabase.rpc('create_workspace', { p_name: name.trim() })
+      const { error } = await supabase.rpc('create_workspace', {
+        p_name: name.trim(),
+        p_full_name: fullName.trim(),
+        p_username: username.trim(),
+      })
       if (error) return { ok: false, error: error.message }
       await loadRef.current?.(me.id)
       return { ok: true }
     },
-    joinWorkspace: async (inviteCode) => {
+    requestJoin: async (inviteCode, fullName, username) => {
       if (!supabase || !me) return { ok: false, error: 'Not signed in.' }
+      if (!fullName.trim()) return { ok: false, error: 'Please enter your full name.' }
       if (!inviteCode.trim()) return { ok: false, error: 'Enter an invite code.' }
-      const { error } = await supabase.rpc('join_workspace', { p_code: inviteCode.trim() })
+      const { error } = await supabase.rpc('request_join', {
+        p_code: inviteCode.trim(),
+        p_full_name: fullName.trim(),
+        p_username: username.trim(),
+      })
       if (error)
         return { ok: false, error: /invalid/i.test(error.message) ? 'That invite code is not valid.' : error.message }
       await loadRef.current?.(me.id)
       return { ok: true }
+    },
+    cancelJoinRequest: () => {
+      if (!supabase || !me) return
+      const myReq = db.joinRequests.find((r) => r.user_id === me.id && r.status === 'pending')
+      if (myReq) remove('joinRequests', myReq.id)
+      supabase.from('join_requests').delete().eq('user_id', me.id).then(({ error }) => error && console.error(error))
+    },
+    approveJoin: (requestId, role) => {
+      if (!supabase || !isAdmin || !me) return
+      supabase.rpc('approve_join', { p_request: requestId, p_role: role }).then(({ error }) => {
+        if (error) console.error(error)
+        else loadRef.current?.(me.id)
+      })
+    },
+    rejectJoin: (requestId) => {
+      if (!supabase || !isAdmin) return
+      patch('joinRequests', requestId, { status: 'rejected' })
+      supabase.rpc('reject_join', { p_request: requestId }).then(({ error }) => error && console.error(error))
     },
     logout: () => {
       supabase?.auth.signOut()
@@ -314,9 +366,10 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       if (!task || !supabase || !(isAdmin || task.assigned_to === me?.id)) return
       const updated_at = nowIso()
       patch('tasks', id, { status, updated_at })
-      supabase.from('tasks').update({ status, updated_at }).eq('id', id).then(({ error }) => error && console.error(error))
+      // status-only RPC (RLS lets only admins update task rows directly)
+      supabase.rpc('set_task_status', { p_task: id, p_status: status }).then(({ error }) => error && console.error(error))
       const client = task.client_id ? db.clients.find((c) => c.id === task.client_id) : undefined
-      if (status === 'completed' && task.status !== 'completed' && client?.phone && currentWorkspace?.wa_enabled) {
+      if (isAdmin && status === 'completed' && task.status !== 'completed' && client?.phone && currentWorkspace?.wa_enabled) {
         const already = db.notifications.some((n) => n.task_id === id && n.status === 'pending')
         if (!already) {
           const n: WaNotification = {

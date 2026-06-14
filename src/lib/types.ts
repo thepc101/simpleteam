@@ -22,10 +22,22 @@ export interface Workspace {
   created_at: string
 }
 
+export interface JoinRequest {
+  id: string
+  workspace_id: string
+  user_id: string
+  email: string | null
+  full_name: string | null
+  username: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 export interface User {
   id: string
   workspace_id: string
   full_name: string
+  username?: string | null
   email: string
   password_hash?: string
   password_salt?: string
@@ -106,6 +118,7 @@ export interface AppState {
   comments: Comment[]
   messages: ChatMessage[]
   notifications: WaNotification[]
+  joinRequests: JoinRequest[]
 }
 
 export const ROLE_LABELS: Record<Role, string> = {

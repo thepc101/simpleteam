@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, User as UserIcon } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { BACKEND } from '@/lib/app-context'
 import { BrandMark } from '@/components/BrandMark'
@@ -15,7 +15,6 @@ export default function LoginPage() {
   const { ready, currentUser, currentWorkspace, login, register, resetPassword } = useApp()
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('signin')
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -53,8 +52,7 @@ export default function LoginPage() {
       }
       return
     }
-    const res =
-      mode === 'signin' ? await login(email, password) : await register({ full_name: name, email, password })
+    const res = mode === 'signin' ? await login(email, password) : await register({ email, password })
     setBusy(false)
     if (!res.ok) setError(res.error)
     else router.replace(mode === 'signup' ? '/onboarding' : '/dashboard')
@@ -65,7 +63,7 @@ export default function LoginPage() {
     mode === 'signin'
       ? 'Welcome back. Enter your details to continue.'
       : mode === 'signup'
-        ? 'You’ll set up your team in the next step.'
+        ? 'Set up your profile and team in the next step.'
         : BACKEND === 'supabase'
           ? 'We’ll email you a secure reset link.'
           : 'Set a new password for your account.'
@@ -110,16 +108,6 @@ export default function LoginPage() {
 
         <div className="card p-6">
           <form onSubmit={submit} className="space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label className="label">Full name</label>
-                <div className="relative">
-                  <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--fg-subtle)' }} />
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Aarav Sharma" maxLength={120} className="input pl-9" />
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="label">Email</label>
               <div className="relative">

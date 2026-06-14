@@ -6,6 +6,7 @@ import type {
   Client,
   ClientType,
   Comment,
+  JoinRequest,
   Role,
   Task,
   TaskCategory,
@@ -41,7 +42,6 @@ export interface ClientInput {
 }
 
 export interface RegisterInput {
-  full_name: string
   email: string
   password: string
 }
@@ -61,6 +61,8 @@ export interface AppContextValue {
   messages: ChatMessage[]
   notifications: WaNotification[]
   pendingNotifications: number
+  joinRequests: JoinRequest[]
+  myJoinRequest: JoinRequest | null
   userById: (id: string | null) => User | undefined
   clientById: (id: string | null) => Client | undefined
   commentsFor: (taskId: string) => Comment[]
@@ -72,8 +74,11 @@ export interface AppContextValue {
   // auth
   login: (email: string, password: string) => Promise<Result>
   register: (input: RegisterInput) => Promise<Result>
-  createWorkspace: (name: string) => Promise<Result>
-  joinWorkspace: (inviteCode: string) => Promise<Result>
+  createWorkspace: (name: string, fullName: string, username: string) => Promise<Result>
+  requestJoin: (inviteCode: string, fullName: string, username: string) => Promise<Result>
+  cancelJoinRequest: () => void
+  approveJoin: (requestId: string, role: Role) => void
+  rejectJoin: (requestId: string) => void
   logout: () => void
   changePassword: (currentPassword: string, newPassword: string) => Promise<Result>
   resetPassword: (email: string, newPassword: string) => Promise<Result>

@@ -7,6 +7,7 @@ import type {
   Client,
   ClientType,
   Comment,
+  JoinRequest,
   Role,
   Task,
   TaskCategory,
@@ -34,6 +35,7 @@ const EMPTY: AppState = {
   comments: [],
   messages: [],
   notifications: [],
+  joinRequests: [],
 }
 
 function loadState(): AppState {
@@ -49,6 +51,7 @@ function loadState(): AppState {
         parsed.comments = parsed.comments ?? []
         parsed.tasks = parsed.tasks ?? []
         parsed.users = parsed.users ?? []
+        parsed.joinRequests = parsed.joinRequests ?? []
         return parsed
       }
     }
@@ -113,6 +116,10 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
         .filter((n) => n.workspace_id === wsId)
         .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
     : []
+  const joinRequests = wsId ? state.joinRequests.filter((r) => r.workspace_id === wsId) : []
+  const myJoinRequest = currentUser
+    ? state.joinRequests.find((r) => r.user_id === currentUser.id && r.status === 'pending') ?? null
+    : null
 
   function canEditTask(_task: Task): boolean {
     return isAdmin
@@ -134,6 +141,8 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
     messages,
     notifications,
     pendingNotifications: notifications.filter((n) => n.status === 'pending').length,
+    joinRequests,
+    myJoinRequest,
     userById: (id) => (id ? state.users.find((u) => u.id === id) : undefined),
     clientById: (id) => (id ? state.clients.find((c) => c.id === id) : undefined),
     commentsFor: (taskId) =>
@@ -164,7 +173,6 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
 
     register: async (input) => {
       const email = input.email.trim().toLowerCase()
-      if (!input.full_name.trim()) return { ok: false, error: 'Please enter your name.' }
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
         return { ok: false, error: 'Please enter a valid email address.' }
       if (input.password.length < 6)
@@ -174,11 +182,12 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
 
       const { hash, salt } = await hashPassword(input.password)
       const userId = randomId('u')
-      // Account is created with no team yet — they create or join one next.
+      // Account only — name/username + team are set in onboarding.
       const user: User = {
         id: userId,
         workspace_id: '',
-        full_name: input.full_name.trim(),
+        full_name: '',
+        username: null,
         email,
         password_hash: hash,
         password_salt: salt,
@@ -191,8 +200,9 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
       return { ok: true }
     },
 
-    createWorkspace: async (name) => {
+    createWorkspace: async (name, fullName, username) => {
       if (!currentUser) return { ok: false, error: 'Not signed in.' }
+      if (!fullName.trim()) return { ok: false, error: 'Please enter your full name.' }
       if (!name.trim()) return { ok: false, error: 'Please name your team.' }
       const wsId = randomId('ws')
       const workspace: Workspace = {
@@ -208,23 +218,68 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
         ...prev,
         workspaces: [...prev.workspaces, workspace],
         users: prev.users.map((u) =>
-          u.id === currentUser.id ? { ...u, workspace_id: wsId, role: 'admin' } : u,
+          u.id === currentUser.id
+            ? { ...u, workspace_id: wsId, role: 'admin', full_name: fullName.trim(), username: username.trim() || null }
+            : u,
         ),
       }))
       return { ok: true }
     },
 
-    joinWorkspace: async (inviteCode) => {
+    requestJoin: async (inviteCode, fullName, username) => {
       if (!currentUser) return { ok: false, error: 'Not signed in.' }
+      if (!fullName.trim()) return { ok: false, error: 'Please enter your full name.' }
       const ws = state.workspaces.find((w) => w.invite_code === inviteCode.trim())
       if (!ws) return { ok: false, error: 'That invite code is not valid.' }
+      const req: JoinRequest = {
+        id: randomId('jr'),
+        workspace_id: ws.id,
+        user_id: currentUser.id,
+        email: currentUser.email,
+        full_name: fullName.trim(),
+        username: username.trim() || null,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      }
       commit((prev) => ({
         ...prev,
         users: prev.users.map((u) =>
-          u.id === currentUser.id ? { ...u, workspace_id: ws.id, role: 'standard' } : u,
+          u.id === currentUser.id ? { ...u, full_name: fullName.trim(), username: username.trim() || null } : u,
         ),
+        joinRequests: [req, ...prev.joinRequests.filter((r) => r.user_id !== currentUser.id)],
       }))
       return { ok: true }
+    },
+
+    cancelJoinRequest: () => {
+      if (!currentUser) return
+      commit((prev) => ({
+        ...prev,
+        joinRequests: prev.joinRequests.filter((r) => !(r.user_id === currentUser.id && r.status === 'pending')),
+      }))
+    },
+
+    approveJoin: (requestId, role) => {
+      if (!isAdmin || !currentWorkspace) return
+      const req = state.joinRequests.find((r) => r.id === requestId)
+      if (!req || req.workspace_id !== currentWorkspace.id) return
+      commit((prev) => ({
+        ...prev,
+        users: prev.users.map((u) =>
+          u.id === req.user_id ? { ...u, workspace_id: req.workspace_id, role } : u,
+        ),
+        joinRequests: prev.joinRequests.map((r) => (r.id === requestId ? { ...r, status: 'approved' } : r)),
+      }))
+    },
+
+    rejectJoin: (requestId) => {
+      if (!isAdmin || !currentWorkspace) return
+      commit((prev) => ({
+        ...prev,
+        joinRequests: prev.joinRequests.map((r) =>
+          r.id === requestId && r.workspace_id === currentWorkspace.id ? { ...r, status: 'rejected' } : r,
+        ),
+      }))
     },
 
     logout: () => setSession(null),
@@ -277,6 +332,7 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
           comments: prev.comments.filter((c) => c.workspace_id !== wid),
           messages: prev.messages.filter((m) => m.workspace_id !== wid),
           notifications: prev.notifications.filter((n) => n.workspace_id !== wid),
+          joinRequests: prev.joinRequests.filter((r) => r.workspace_id !== wid),
         }))
       } else {
         commit((prev) => ({
