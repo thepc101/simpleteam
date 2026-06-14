@@ -251,7 +251,7 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       })
       if (error) return { ok: false, error: error.message }
       if (!data.session)
-        return { ok: false, error: 'Account created — please confirm your email, then sign in. (Tip: disable email confirmation in Supabase for instant access.)' }
+        return { ok: false, error: 'Account created! Please check your email to confirm your address, then sign in.' }
       return { ok: true }
     },
     createWorkspace: async (name, fullName, username) => {
