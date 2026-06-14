@@ -1,14 +1,17 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Trim to defend against copy-paste whitespace / quotes / trailing slashes.
+const clean = (v: string | undefined) => (v ?? '').trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '')
 
-export const isSupabaseConfigured = Boolean(url && anon)
+const url = clean(process.env.NEXT_PUBLIC_SUPABASE_URL)
+const anon = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
-// Single browser client (persists session in localStorage, auto-refreshes tokens,
-// and detects the recovery token in the URL for password resets).
+// Only treat as configured when the URL is a real https Supabase endpoint — a
+// malformed value falls back to local mode instead of breaking login.
+export const isSupabaseConfigured = /^https:\/\/.+\.supabase\.co$/.test(url) && anon.length > 20
+
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(url as string, anon as string, {
+  ? createClient(url, anon, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     })
   : null
