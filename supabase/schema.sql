@@ -9,7 +9,7 @@ create extension if not exists pgcrypto;
 -- ---- invite-code generator --------------------------------
 create or replace function public.gen_invite_code()
 returns text language sql volatile as $$
-  select 'stm_' || replace(replace(encode(gen_random_bytes(24), 'base64'), '+', '-'), '/', '_');
+  select 'stm_' || replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 $$;
 
 -- ============================================================
