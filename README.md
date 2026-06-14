@@ -20,8 +20,8 @@ SimpleTeam gives a CA practice the 20% of features they use 80% of the time: cli
 
 ## Tech
 
-- Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react
-- Demo build: local-first (state in `localStorage`, cross-tab live updates). Designed to drop onto **Supabase + Groq + Vercel** for production (`supabase/schema.sql` included as a reference).
+- Next.js 14 (App Router) · TypeScript · Tailwind CSS · lucide-react · Supabase
+- **Two backends, auto-selected.** With `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` set, it runs on **Supabase** (real accounts, multi-user, realtime). Without them it runs **local-first** on this device (`localStorage`, cross-tab live updates). See [`SUPABASE.md`](SUPABASE.md).
 
 ## Run locally
 
@@ -31,15 +31,9 @@ npm run dev
 # open http://localhost:3000
 ```
 
-### Demo accounts (password `demo1234`)
-
-| Role | Email |
-|------|-------|
-| Admin / Owner | `admin@simpleteam.app` |
-| Team Leader | `priya@simpleteam.app` |
-| Member | `diya@simpleteam.app` |
-
-Or use the one-click demo buttons on the sign-in screen.
+On first run, **create an account** — you become the owner/admin of a new, empty workspace.
+Invite teammates with the workspace's invite code (Settings → they choose "Join with code").
+To go cloud + multi-user, follow [`SUPABASE.md`](SUPABASE.md).
 
 ---
 

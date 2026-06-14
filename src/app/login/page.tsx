@@ -19,7 +19,6 @@ import {
 } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { BACKEND } from '@/lib/app-context'
-import { DEMO_PASSWORD } from '@/lib/seed'
 import { cn } from '@/lib/utils'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -85,15 +84,6 @@ export default function LoginPage() {
     setBusy(false)
     if (!res.ok) setError(res.error)
     else router.replace('/dashboard')
-  }
-
-  async function quickDemo(demoEmail: string) {
-    setError('')
-    setBusy(true)
-    const res = await login(demoEmail, DEMO_PASSWORD)
-    setBusy(false)
-    if (res.ok) router.replace('/dashboard')
-    else setError(res.error)
   }
 
   const heading = mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset password'
@@ -278,19 +268,6 @@ export default function LoginPage() {
               )}
             </p>
 
-            {mode !== 'forgot' && (
-              <div className="mt-7 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-                <p className="text-xs font-medium text-slate-500">Demo — one-click sign in</p>
-                <div className="mt-2.5 grid grid-cols-3 gap-2">
-                  <button onClick={() => quickDemo('admin@simpleteam.app')} disabled={busy} className="btn-outline btn-sm">Admin</button>
-                  <button onClick={() => quickDemo('priya@simpleteam.app')} disabled={busy} className="btn-outline btn-sm">Leader</button>
-                  <button onClick={() => quickDemo('diya@simpleteam.app')} disabled={busy} className="btn-outline btn-sm">Member</button>
-                </div>
-                <p className="mt-2.5 text-[11px] text-slate-400">
-                  Password for all demo accounts: <span className="font-mono">{DEMO_PASSWORD}</span>
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </div>

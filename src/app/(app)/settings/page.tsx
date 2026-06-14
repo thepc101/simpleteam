@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Copy, KeyRound, Loader2, Lock, LogOut, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, Copy, KeyRound, Loader2, Lock, LogOut, RefreshCw, Trash2 } from 'lucide-react'
 import { useApp } from '@/lib/store'
+import { BACKEND } from '@/lib/app-context'
 import { ROLE_LABELS } from '@/lib/types'
 import { Avatar } from '@/components/Avatar'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -18,7 +19,6 @@ export default function SettingsPage() {
     updateUser,
     updateWorkspace,
     regenerateInvite,
-    resetDemo,
     logout,
     changePassword,
     deleteAccount,
@@ -88,9 +88,6 @@ export default function SettingsPage() {
   function signOut() {
     logout()
     router.replace('/login')
-  }
-  function reset() {
-    if (confirm('Reset all demo data (tasks, comments, team, notifications) to defaults?')) resetDemo()
   }
 
   return (
@@ -203,18 +200,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Data */}
-      <div className="card p-5">
-        <h3 className="text-sm font-semibold">Workspace data</h3>
-        <p className="mt-1 text-xs text-slate-400">
-          This demo stores everything locally in your browser. Resetting restores the original
-          sample workspace, tasks and team.
-        </p>
-        <button onClick={reset} className="btn-outline btn-sm mt-3">
-          <RotateCcw className="h-4 w-4" /> Reset demo data
-        </button>
-      </div>
-
       {/* Account */}
       <div className="card flex items-center justify-between p-5">
         <div>
@@ -242,7 +227,7 @@ export default function SettingsPage() {
       </div>
 
       <p className="px-1 text-center text-xs text-slate-400">
-        SimpleTeam · Local demo build · Backend (Supabase + Groq) wires in on Vercel for production.
+        SimpleTeam · {BACKEND === 'supabase' ? 'Connected to Supabase' : 'Running on this device (local storage)'}
       </p>
     </div>
   )

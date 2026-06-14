@@ -100,8 +100,6 @@ export interface AppContextValue {
   logClientMessage: (clientId: string, body: string) => void
   updateNotificationBody: (id: string, body: string) => void
   markNotificationSent: (id: string) => void
-  // demo
-  resetDemo: () => void
 }
 
 export const AppCtx = createContext<AppContextValue | null>(null)

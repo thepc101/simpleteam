@@ -16,7 +16,6 @@ import type {
   WaNotification,
   Workspace,
 } from './types'
-import { buildSeed } from './seed'
 import { generateInviteCode, hashPassword, randomId, sanitizePhone, verifyPassword } from './crypto'
 import { pickAvatarColor } from './utils'
 import { buildMessage, DEFAULT_WA_TEMPLATE } from './whatsapp'
@@ -24,8 +23,8 @@ import { AppCtx, type AppContextValue } from './app-context'
 import { SupabaseAppProvider } from './store-supabase'
 import { isSupabaseConfigured } from './supabaseClient'
 
-const STORE_KEY = 'simpleteam:data:v4'
-const SESSION_KEY = 'simpleteam:session:v4'
+const STORE_KEY = 'simpleteam:data:v5'
+const SESSION_KEY = 'simpleteam:session:v5'
 
 const EMPTY: AppState = {
   workspaces: [],
@@ -54,11 +53,11 @@ function loadState(): AppState {
       }
     }
   } catch {
-    /* fall through to reseed */
+    /* fall through to empty */
   }
-  const seed = buildSeed()
-  localStorage.setItem(STORE_KEY, JSON.stringify(seed))
-  return seed
+  // Standalone product: a fresh device starts empty — the first user signs up
+  // and creates their own workspace.
+  return EMPTY
 }
 
 function LocalAppProvider({ children }: { children: ReactNode }) {
@@ -556,12 +555,6 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
           n.id === id ? { ...n, status: 'sent', sent_at: now } : n,
         ),
       }))
-    },
-
-    resetDemo: () => {
-      const seed = buildSeed()
-      localStorage.setItem(STORE_KEY, JSON.stringify(seed))
-      setState(seed)
     },
   }
 

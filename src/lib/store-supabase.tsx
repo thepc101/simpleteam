@@ -469,10 +469,6 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       patch('notifications', id, { status: 'sent', sent_at })
       supabase.from('notifications').update({ status: 'sent', sent_at }).eq('id', id).then(({ error }) => error && console.error(error))
     },
-
-    resetDemo: () => {
-      console.warn('resetDemo is only available in the local demo build.')
-    },
   }
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>
