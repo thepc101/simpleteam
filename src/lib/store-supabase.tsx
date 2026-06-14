@@ -247,7 +247,11 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email: input.email.trim(),
         password: input.password,
-        options: { data: { avatar_color: pickAvatarColor(input.email) } },
+        options: {
+          data: { avatar_color: pickAvatarColor(input.email) },
+          // Send the confirmation link back to THIS site, not Supabase's default localhost.
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
       })
       if (error) return { ok: false, error: error.message }
       if (!data.session)
