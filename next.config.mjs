@@ -21,7 +21,8 @@ const prodHeaders = isProd
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob:",
           "font-src 'self'",
-          "connect-src 'self'",
+          // Allow Supabase REST/Auth (https) and Realtime (wss)
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
           "frame-ancestors 'self'",
           "base-uri 'self'",
           "form-action 'self'",
