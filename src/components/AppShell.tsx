@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  Boxes,
   Building2,
   CalendarDays,
   Columns3,
@@ -46,6 +47,7 @@ const SECTIONS: { label: string | null; items: NavItem[] }[] = [
     label: null,
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/modules', label: 'Modules', icon: Boxes },
       { href: '/my-tasks', label: 'My Tasks', icon: CircleCheck },
       { href: '/calendar', label: 'Calendar', icon: CalendarDays },
       { href: '/tasks', label: 'All Tasks', icon: Columns3 },
