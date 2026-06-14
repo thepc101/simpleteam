@@ -10,7 +10,9 @@ import {
   Columns3,
   CircleCheck,
   Crown,
+  FileText,
   Inbox,
+  Landmark,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -61,6 +63,14 @@ const SECTIONS: { label: string | null; items: NavItem[] }[] = [
       { href: '/team', label: 'Team', icon: Users },
       { href: '/chat', label: 'Chat', icon: MessagesSquare, badgeKind: 'chat' },
       { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, badgeKind: 'whatsapp' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: '/invoices', label: 'Invoices', icon: FileText },
+      { href: '/inventory', label: 'Inventory', icon: Boxes },
+      { href: '/loans', label: 'Loans', icon: Landmark },
     ],
   },
   {
