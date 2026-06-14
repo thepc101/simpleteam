@@ -261,7 +261,7 @@ create policy ws_update on public.workspaces for update to authenticated using (
 create policy ws_delete on public.workspaces for delete to authenticated using (owner_id = auth.uid());
 
 -- profiles
-create policy pr_select on public.profiles for select to authenticated using (workspace_id = public.my_workspace_id());
+create policy pr_select on public.profiles for select to authenticated using (id = auth.uid() or workspace_id = public.my_workspace_id());
 create policy pr_insert on public.profiles for insert to authenticated with check (id = auth.uid());
 create policy pr_update on public.profiles for update to authenticated using (id = auth.uid() or public.is_admin());
 create policy pr_delete on public.profiles for delete to authenticated using (id = auth.uid() or public.is_admin());
@@ -303,3 +303,13 @@ create policy jr_delete on public.join_requests for delete to authenticated usin
 alter publication supabase_realtime add table
   public.workspaces, public.profiles, public.clients, public.tasks,
   public.comments, public.messages, public.notifications, public.join_requests;
+
+-- ============================================================
+-- GRANTS (RLS still gates every row; this just lets the
+-- authenticated role reach the tables at all)
+-- ============================================================
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on
+  public.workspaces, public.profiles, public.clients, public.tasks,
+  public.comments, public.messages, public.notifications, public.join_requests
+  to authenticated;
