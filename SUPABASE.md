@@ -23,7 +23,9 @@ You don't change any code to switch — just add the two keys.
 - **Authentication → Providers → Email**: for instant access during setup, turn **off
   “Confirm email.”** (Leave it on for production — users then confirm via an email link before
   the first sign-in.)
-- Password reset emails work out of the box; the reset link lands on `/reset`.
+- **Authentication → URL Configuration**: set the **Site URL** (your Vercel URL, or
+  `http://localhost:3000` locally) and add it under **Redirect URLs**. This makes the
+  **password-reset** links work — they return the user to `/reset` to set a new password.
 
 ## 4. Get your keys
 - **Project Settings → API** → copy the **Project URL** and the **anon public** key.
@@ -38,9 +40,10 @@ npm run dev
 **Vercel:** Project → **Settings → Environment Variables** → add both keys → **Redeploy**.
 
 ## 6. First run
-- Sign up with **“New workspace”** → you become the **owner/admin**.
-- Share the **invite code** (Settings) with your team; they choose **“Join with code.”**
-- Promote teammates to admin/leader in **Team**.
+- **Sign up** (name, email, password) → then **Create a team** (you become the **owner/admin**).
+- Share the workspace **invite code** (Settings) with your team; they sign up and choose
+  **Join a team**.
+- New members start with no special role — **the owner promotes them** (admin/leader) in **Team**.
 
 ## Notes
 - The sample “Acme & Associates” data only exists in the local demo; your Supabase workspace

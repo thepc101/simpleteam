@@ -44,6 +44,7 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<User | null>(null)
   const [ready, setReady] = useState(false)
   const loadedRef = useRef<string | null>(null)
+  const loadRef = useRef<((uid: string) => Promise<void>) | null>(null)
 
   // ---- local state helpers (optimistic; realtime echoes are deduped by id) ----
   function upsert(key: keyof DB, row: { id: string }) {
@@ -122,6 +123,13 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
         return
       }
       const wsId = (prof as User).workspace_id
+      if (!wsId) {
+        // Signed in but no team yet → onboarding will create/join one.
+        setMe(prof as User)
+        setDb(EMPTY_DB)
+        setReady(true)
+        return
+      }
       const [ws, users, clients, tasks, comments, messages, notifications] = await Promise.all([
         sb.from('workspaces').select('*').eq('id', wsId).maybeSingle(),
         sb.from('profiles').select('*').eq('workspace_id', wsId),
@@ -144,6 +152,7 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       setReady(true)
       subscribe(wsId)
     }
+    loadRef.current = loadFor
 
     const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session?.user) {
@@ -206,19 +215,12 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
     },
     register: async (input) => {
       if (!supabase) return { ok: false, error: 'Supabase not configured.' }
-      if (input.mode === 'create' && !input.workspaceName?.trim())
-        return { ok: false, error: 'Please name your firm / workspace.' }
-      if (input.mode === 'join' && !input.inviteCode?.trim())
-        return { ok: false, error: 'Enter an invite code to join a workspace.' }
       const { data, error } = await supabase.auth.signUp({
         email: input.email.trim(),
         password: input.password,
         options: {
           data: {
             full_name: input.full_name.trim(),
-            mode: input.mode,
-            workspace_name: input.workspaceName?.trim() ?? '',
-            invite_code: input.inviteCode?.trim() ?? '',
             avatar_color: pickAvatarColor(input.email),
           },
         },
@@ -226,6 +228,23 @@ export function SupabaseAppProvider({ children }: { children: ReactNode }) {
       if (error) return { ok: false, error: error.message }
       if (!data.session)
         return { ok: false, error: 'Account created — please confirm your email, then sign in. (Tip: disable email confirmation in Supabase for instant access.)' }
+      return { ok: true }
+    },
+    createWorkspace: async (name) => {
+      if (!supabase || !me) return { ok: false, error: 'Not signed in.' }
+      if (!name.trim()) return { ok: false, error: 'Please name your team.' }
+      const { error } = await supabase.rpc('create_workspace', { p_name: name.trim() })
+      if (error) return { ok: false, error: error.message }
+      await loadRef.current?.(me.id)
+      return { ok: true }
+    },
+    joinWorkspace: async (inviteCode) => {
+      if (!supabase || !me) return { ok: false, error: 'Not signed in.' }
+      if (!inviteCode.trim()) return { ok: false, error: 'Enter an invite code.' }
+      const { error } = await supabase.rpc('join_workspace', { p_code: inviteCode.trim() })
+      if (error)
+        return { ok: false, error: /invalid/i.test(error.message) ? 'That invite code is not valid.' : error.message }
+      await loadRef.current?.(me.id)
       return { ok: true }
     },
     logout: () => {

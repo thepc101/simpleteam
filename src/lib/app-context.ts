@@ -44,9 +44,6 @@ export interface RegisterInput {
   full_name: string
   email: string
   password: string
-  mode: 'create' | 'join'
-  workspaceName?: string
-  inviteCode?: string
 }
 
 export type Result = { ok: true } | { ok: false; error: string }
@@ -75,6 +72,8 @@ export interface AppContextValue {
   // auth
   login: (email: string, password: string) => Promise<Result>
   register: (input: RegisterInput) => Promise<Result>
+  createWorkspace: (name: string) => Promise<Result>
+  joinWorkspace: (inviteCode: string) => Promise<Result>
   logout: () => void
   changePassword: (currentPassword: string, newPassword: string) => Promise<Result>
   resetPassword: (email: string, newPassword: string) => Promise<Result>

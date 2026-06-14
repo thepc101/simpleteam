@@ -4,10 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
-  Building2,
   Eye,
   EyeOff,
-  KeyRound,
   Loader2,
   Lock,
   Mail,
@@ -19,7 +17,6 @@ import {
 } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { BACKEND } from '@/lib/app-context'
-import { cn } from '@/lib/utils'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MadeBy } from '@/components/MadeBy'
@@ -33,23 +30,20 @@ const FEATURES = [
 ]
 
 export default function LoginPage() {
-  const { ready, currentUser, login, register, resetPassword } = useApp()
+  const { ready, currentUser, currentWorkspace, login, register, resetPassword } = useApp()
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('signin')
-  const [joinMode, setJoinMode] = useState<'create' | 'join'>('create')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [workspaceName, setWorkspaceName] = useState('')
-  const [inviteCode, setInviteCode] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (ready && currentUser) router.replace('/dashboard')
-  }, [ready, currentUser, router])
+    if (ready && currentUser) router.replace(currentWorkspace ? '/dashboard' : '/onboarding')
+  }, [ready, currentUser, currentWorkspace, router])
 
   function switchMode(m: Mode) {
     setMode(m)
@@ -78,12 +72,10 @@ export default function LoginPage() {
       return
     }
     const res =
-      mode === 'signin'
-        ? await login(email, password)
-        : await register({ full_name: name, email, password, mode: joinMode, workspaceName, inviteCode })
+      mode === 'signin' ? await login(email, password) : await register({ full_name: name, email, password })
     setBusy(false)
     if (!res.ok) setError(res.error)
-    else router.replace('/dashboard')
+    else router.replace(mode === 'signup' ? '/onboarding' : '/dashboard')
   }
 
   const heading = mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset password'
@@ -91,7 +83,7 @@ export default function LoginPage() {
     mode === 'signin'
       ? 'Sign in to your SimpleTeam workspace.'
       : mode === 'signup'
-        ? 'Start a workspace or join one with an invite code.'
+        ? 'Create your account — you’ll set up your team next.'
         : BACKEND === 'supabase'
           ? 'We’ll email you a secure password-reset link.'
           : 'Set a new password for your account.'
@@ -102,9 +94,7 @@ export default function LoginPage() {
         ? BACKEND === 'supabase'
           ? 'Send reset link'
           : 'Reset password'
-        : joinMode === 'create'
-          ? 'Create workspace'
-          : 'Join workspace'
+        : 'Create account'
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -163,30 +153,13 @@ export default function LoginPage() {
 
             <form onSubmit={submit} className="mt-6 space-y-4">
               {mode === 'signup' && (
-                <>
-                  <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
-                    {(['create', 'join'] as const).map((jm) => (
-                      <button
-                        key={jm}
-                        type="button"
-                        onClick={() => setJoinMode(jm)}
-                        className={cn(
-                          'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition',
-                          joinMode === jm ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500',
-                        )}
-                      >
-                        {jm === 'create' ? 'New workspace' : 'Join with code'}
-                      </button>
-                    ))}
+                <div>
+                  <label className="label">Full name</label>
+                  <div className="relative">
+                    <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Aarav Sharma" maxLength={120} className="input pl-9" />
                   </div>
-                  <div>
-                    <label className="label">Full name</label>
-                    <div className="relative">
-                      <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Aarav Sharma" className="input pl-9" />
-                    </div>
-                  </div>
-                </>
+                </div>
               )}
 
               <div>
@@ -222,28 +195,6 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-              )}
-
-              {mode === 'signup' && joinMode === 'create' && (
-                <div>
-                  <label className="label">Firm / workspace name</label>
-                  <div className="relative">
-                    <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="Acme & Associates, CAs" className="input pl-9" />
-                  </div>
-                  <p className="mt-1 text-[11px] text-slate-400">You’ll be the owner &amp; admin.</p>
-                </div>
-              )}
-
-              {mode === 'signup' && joinMode === 'join' && (
-                <div>
-                  <label className="label">Invite code</label>
-                  <div className="relative">
-                    <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="stm_…" className="input pl-9 font-mono text-xs" />
-                  </div>
-                  <p className="mt-1 text-[11px] text-slate-400">Ask an admin for your workspace code.</p>
-                </div>
               )}
 
               {error && (

@@ -174,44 +174,56 @@ function LocalAppProvider({ children }: { children: ReactNode }) {
 
       const { hash, salt } = await hashPassword(input.password)
       const userId = randomId('u')
-      const now = new Date().toISOString()
-      const base = {
+      // Account is created with no team yet — they create or join one next.
+      const user: User = {
         id: userId,
+        workspace_id: '',
         full_name: input.full_name.trim(),
         email,
         password_hash: hash,
         password_salt: salt,
+        role: 'standard',
         avatar_color: pickAvatarColor(userId),
-        created_at: now,
+        created_at: new Date().toISOString(),
       }
-
-      if (input.mode === 'create') {
-        if (!input.workspaceName?.trim()) return { ok: false, error: 'Please name your firm / workspace.' }
-        const newWsId = randomId('ws')
-        const workspace: Workspace = {
-          id: newWsId,
-          name: input.workspaceName.trim(),
-          invite_code: generateInviteCode(),
-          owner_id: userId,
-          wa_enabled: true,
-          wa_template: DEFAULT_WA_TEMPLATE,
-          created_at: now,
-        }
-        const user: User = { ...base, workspace_id: newWsId, role: 'admin' }
-        commit((prev) => ({
-          ...prev,
-          workspaces: [...prev.workspaces, workspace],
-          users: [...prev.users, user],
-        }))
-      } else {
-        const code = (input.inviteCode ?? '').trim()
-        if (!code) return { ok: false, error: 'Enter an invite code to join a workspace.' }
-        const workspace = state.workspaces.find((w) => w.invite_code === code)
-        if (!workspace) return { ok: false, error: 'That invite code is not valid.' }
-        const user: User = { ...base, workspace_id: workspace.id, role: 'standard' }
-        commit((prev) => ({ ...prev, users: [...prev.users, user] }))
-      }
+      commit((prev) => ({ ...prev, users: [...prev.users, user] }))
       setSession(userId)
+      return { ok: true }
+    },
+
+    createWorkspace: async (name) => {
+      if (!currentUser) return { ok: false, error: 'Not signed in.' }
+      if (!name.trim()) return { ok: false, error: 'Please name your team.' }
+      const wsId = randomId('ws')
+      const workspace: Workspace = {
+        id: wsId,
+        name: name.trim(),
+        invite_code: generateInviteCode(),
+        owner_id: currentUser.id,
+        wa_enabled: true,
+        wa_template: DEFAULT_WA_TEMPLATE,
+        created_at: new Date().toISOString(),
+      }
+      commit((prev) => ({
+        ...prev,
+        workspaces: [...prev.workspaces, workspace],
+        users: prev.users.map((u) =>
+          u.id === currentUser.id ? { ...u, workspace_id: wsId, role: 'admin' } : u,
+        ),
+      }))
+      return { ok: true }
+    },
+
+    joinWorkspace: async (inviteCode) => {
+      if (!currentUser) return { ok: false, error: 'Not signed in.' }
+      const ws = state.workspaces.find((w) => w.invite_code === inviteCode.trim())
+      if (!ws) return { ok: false, error: 'That invite code is not valid.' }
+      commit((prev) => ({
+        ...prev,
+        users: prev.users.map((u) =>
+          u.id === currentUser.id ? { ...u, workspace_id: ws.id, role: 'standard' } : u,
+        ),
+      }))
       return { ok: true }
     },
 

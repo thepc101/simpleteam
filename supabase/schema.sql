@@ -128,28 +128,14 @@ $$;
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
-  meta   jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
-  v_mode text := coalesce(meta->>'mode', 'create');
-  v_ws   uuid;
-  v_role text := 'standard';
+  meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
 begin
-  if v_mode = 'join' then
-    select id into v_ws from public.workspaces where invite_code = meta->>'invite_code';
-    if v_ws is null then
-      raise exception 'Invalid invite code';
-    end if;
-  else
-    insert into public.workspaces (name, owner_id)
-    values (coalesce(nullif(meta->>'workspace_name', ''), 'My Firm'), new.id)
-    returning id into v_ws;
-    v_role := 'admin';
-  end if;
-
+  -- Create a profile only. The user creates or joins a team after signing in.
   insert into public.profiles (id, workspace_id, full_name, email, role, avatar_color)
   values (
-    new.id, v_ws,
+    new.id, null,
     coalesce(nullif(meta->>'full_name', ''), new.email),
-    new.email, v_role,
+    new.email, 'standard',
     coalesce(meta->>'avatar_color', '#6366f1')
   );
   return new;
@@ -160,6 +146,35 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ---- create / join a team (called after signing in) -------
+-- The creator becomes owner + admin. Joiners start as 'standard'; the owner
+-- assigns their real role afterward in the Team page.
+create or replace function public.create_workspace(p_name text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_ws uuid;
+begin
+  insert into public.workspaces (name, owner_id)
+  values (coalesce(nullif(p_name, ''), 'My Firm'), auth.uid())
+  returning id into v_ws;
+  update public.profiles set workspace_id = v_ws, role = 'admin' where id = auth.uid();
+  return v_ws;
+end;
+$$;
+
+create or replace function public.join_workspace(p_code text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_ws uuid;
+begin
+  select id into v_ws from public.workspaces where invite_code = p_code;
+  if v_ws is null then raise exception 'Invalid invite code'; end if;
+  update public.profiles set workspace_id = v_ws, role = 'standard' where id = auth.uid();
+  return v_ws;
+end;
+$$;
+
+grant execute on function public.create_workspace(text) to authenticated;
+grant execute on function public.join_workspace(text) to authenticated;
 
 -- ============================================================
 -- ROW LEVEL SECURITY
