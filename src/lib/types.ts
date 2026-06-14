@@ -76,6 +76,15 @@ export interface Task {
   updated_at: string
 }
 
+export interface ChatMessage {
+  id: string
+  workspace_id: string
+  channel: string // 'general' or a DM key (dm:<idA>:<idB>)
+  author_id: string
+  body: string
+  created_at: string
+}
+
 export interface WaNotification {
   id: string
   workspace_id: string
@@ -95,6 +104,7 @@ export interface AppState {
   clients: Client[]
   tasks: Task[]
   comments: Comment[]
+  messages: ChatMessage[]
   notifications: WaNotification[]
 }
 

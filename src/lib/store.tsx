@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type {
   AppState,
+  ChatMessage,
   Client,
   ClientType,
   Comment,
@@ -29,6 +30,7 @@ const EMPTY: AppState = {
   clients: [],
   tasks: [],
   comments: [],
+  messages: [],
   notifications: [],
 }
 
@@ -38,7 +40,15 @@ function loadState(): AppState {
     const raw = localStorage.getItem(STORE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as AppState
-      if (parsed && Array.isArray(parsed.workspaces) && Array.isArray(parsed.clients)) return parsed
+      if (parsed && Array.isArray(parsed.workspaces) && Array.isArray(parsed.clients)) {
+        // forward-compatible: ensure newer collections exist on older saved state
+        parsed.messages = parsed.messages ?? []
+        parsed.notifications = parsed.notifications ?? []
+        parsed.comments = parsed.comments ?? []
+        parsed.tasks = parsed.tasks ?? []
+        parsed.users = parsed.users ?? []
+        return parsed
+      }
     }
   } catch {
     /* fall through to reseed */
@@ -93,12 +103,15 @@ interface AppContextValue {
   clients: Client[]
   tasks: Task[]
   comments: Comment[]
+  messages: ChatMessage[]
   notifications: WaNotification[]
   pendingNotifications: number
   userById: (id: string | null) => User | undefined
   clientById: (id: string | null) => Client | undefined
   commentsFor: (taskId: string) => Comment[]
+  messagesFor: (channel: string) => ChatMessage[]
   tasksForClient: (clientId: string) => Task[]
+  sendMessage: (channel: string, body: string) => void
   canEditTask: (task: Task) => boolean
   canChangeStatus: (task: Task) => boolean
   // auth
@@ -182,6 +195,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clients = wsId ? state.clients.filter((c) => c.workspace_id === wsId) : []
   const tasks = wsId ? state.tasks.filter((t) => t.workspace_id === wsId) : []
   const comments = wsId ? state.comments.filter((c) => c.workspace_id === wsId) : []
+  const messages = wsId ? state.messages.filter((m) => m.workspace_id === wsId) : []
   const notifications = wsId
     ? state.notifications
         .filter((n) => n.workspace_id === wsId)
@@ -205,6 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clients,
     tasks,
     comments,
+    messages,
     notifications,
     pendingNotifications: notifications.filter((n) => n.status === 'pending').length,
     userById: (id) => (id ? state.users.find((u) => u.id === id) : undefined),
@@ -212,6 +227,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     commentsFor: (taskId) =>
       comments
         .filter((c) => c.task_id === taskId)
+        .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at)),
+    messagesFor: (channel) =>
+      messages
+        .filter((m) => m.channel === channel)
         .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at)),
     tasksForClient: (clientId) => tasks.filter((t) => t.client_id === clientId),
     canEditTask,
@@ -332,6 +351,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           clients: prev.clients.filter((c) => c.workspace_id !== wid),
           tasks: prev.tasks.filter((t) => t.workspace_id !== wid),
           comments: prev.comments.filter((c) => c.workspace_id !== wid),
+          messages: prev.messages.filter((m) => m.workspace_id !== wid),
           notifications: prev.notifications.filter((n) => n.workspace_id !== wid),
         }))
       } else {
@@ -352,8 +372,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const task: Task = {
         id: randomId('t'),
         workspace_id: currentWorkspace.id,
-        title: input.title.trim(),
-        description: input.description?.trim() || null,
+        title: input.title.trim().slice(0, 200),
+        description: input.description?.trim().slice(0, 4000) || null,
         status: input.status ?? 'pending',
         priority: input.priority,
         category: input.category ?? 'other',
@@ -523,7 +543,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
 
     addComment: (taskId, body) => {
-      if (!body.trim() || !currentUser || !currentWorkspace) return
+      const text = body.trim().slice(0, 1000)
+      if (!text || !currentUser || !currentWorkspace) return
       const task = state.tasks.find((t) => t.id === taskId)
       if (!task || task.workspace_id !== currentWorkspace.id) return
       const c: Comment = {
@@ -531,10 +552,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         workspace_id: currentWorkspace.id,
         task_id: taskId,
         author_id: currentUser.id,
-        body: body.trim(),
+        body: text,
         created_at: new Date().toISOString(),
       }
       commit((prev) => ({ ...prev, comments: [...prev.comments, c] }))
+    },
+
+    sendMessage: (channel, body) => {
+      if (!currentUser || !currentWorkspace || !channel) return
+      const text = body.trim().slice(0, 2000)
+      if (!text) return
+      const msg: ChatMessage = {
+        id: randomId('msg'),
+        workspace_id: currentWorkspace.id,
+        channel,
+        author_id: currentUser.id,
+        body: text,
+        created_at: new Date().toISOString(),
+      }
+      commit((prev) => ({ ...prev, messages: [...prev.messages, msg] }))
     },
 
     logClientUpdate: (taskId, body) => {

@@ -1,6 +1,6 @@
-import type { AppState, Client, Task, User, WaNotification, Workspace } from './types'
+import type { AppState, ChatMessage, Client, Task, User, WaNotification, Workspace } from './types'
 import { generateInviteCode } from './crypto'
-import { pickAvatarColor } from './utils'
+import { dmKey, pickAvatarColor } from './utils'
 import { DEFAULT_WA_TEMPLATE } from './whatsapp'
 
 export const DEMO_PASSWORD = 'demo1234'
@@ -116,12 +116,21 @@ export function buildSeed(): AppState {
     cmt('cm4', 't11', 'u-rohan', 'Started ledger scrutiny — cash vouching pending.', ago(300)),
   ]
 
+  const messages: ChatMessage[] = [
+    { id: 'msg1', workspace_id: WS_ID, channel: 'general', author_id: 'u-admin', body: 'Morning team — GST filing week. Let’s keep client updates flowing on WhatsApp.', created_at: ago(600) },
+    { id: 'msg2', workspace_id: WS_ID, channel: 'general', author_id: 'u-priya', body: 'On it. Nirvana’s GSTR-3B is in review, one 2B mismatch to clear.', created_at: ago(540) },
+    { id: 'msg3', workspace_id: WS_ID, channel: 'general', author_id: 'u-rohan', body: 'Advance tax computations for Patel & Co. by EOD.', created_at: ago(130) },
+    { id: 'msg4', workspace_id: WS_ID, channel: dmKey('u-admin', 'u-priya'), author_id: 'u-admin', body: 'Can you prioritise the ASMT-10 reply for Nirvana?', created_at: ago(95) },
+    { id: 'msg5', workspace_id: WS_ID, channel: dmKey('u-admin', 'u-priya'), author_id: 'u-priya', body: 'Yes — drafting now. Need the purchase register from the client.', created_at: ago(85) },
+  ]
+
   return {
     workspaces: [workspace],
     users: SEED_USERS,
     clients: SEED_CLIENTS,
     tasks,
     comments,
+    messages,
     notifications,
   }
 }

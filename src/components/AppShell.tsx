@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  MessagesSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -37,7 +38,7 @@ interface NavItem {
   label: string
   icon: typeof LayoutDashboard
   adminOnly?: boolean
-  badge?: boolean
+  badgeKind?: 'whatsapp' | 'chat'
 }
 
 const SECTIONS: { label: string | null; items: NavItem[] }[] = [
@@ -56,7 +57,8 @@ const SECTIONS: { label: string | null; items: NavItem[] }[] = [
     items: [
       { href: '/clients', label: 'Clients', icon: Building2 },
       { href: '/team', label: 'Team', icon: Users },
-      { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true, badge: true },
+      { href: '/chat', label: 'Chat', icon: MessagesSquare, badgeKind: 'chat' },
+      { href: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true, badgeKind: 'whatsapp' },
     ],
   },
   {
@@ -70,14 +72,28 @@ const SECTIONS: { label: string | null; items: NavItem[] }[] = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { currentUser, currentWorkspace, isAdmin, isOwner, logout, pendingNotifications } = useApp()
+  const { currentUser, currentWorkspace, isAdmin, isOwner, logout, pendingNotifications, messages } =
+    useApp()
   const [drawer, setDrawer] = useState(false)
   const [newTask, setNewTask] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [chatSeen, setChatSeen] = useState(0)
 
   useEffect(() => {
     setCollapsed(localStorage.getItem('simpleteam:sidebar') === 'collapsed')
+    const readSeen = () => setChatSeen(Number(localStorage.getItem('simpleteam:chat:seen')) || 0)
+    readSeen()
+    window.addEventListener('chat-read', readSeen)
+    window.addEventListener('storage', readSeen)
+    return () => {
+      window.removeEventListener('chat-read', readSeen)
+      window.removeEventListener('storage', readSeen)
+    }
   }, [])
+
+  const chatUnread = messages.filter(
+    (m) => m.author_id !== currentUser?.id && +new Date(m.created_at) > chatSeen,
+  ).length
 
   function toggleCollapse() {
     setCollapsed((c) => {
@@ -108,7 +124,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {items.map((item) => {
                 const isActive = pathname.startsWith(item.href)
                 const Icon = item.icon
-                const showBadge = item.badge && pendingNotifications > 0
+                const badgeCount =
+                  item.badgeKind === 'whatsapp'
+                    ? pendingNotifications
+                    : item.badgeKind === 'chat'
+                      ? chatUnread
+                      : 0
+                const showBadge = badgeCount > 0
+                const badgeColor = item.badgeKind === 'whatsapp' ? 'bg-emerald-500' : 'accent-bg'
                 return (
                   <Link
                     key={item.href}
@@ -120,13 +143,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="relative">
                       <Icon className="h-[18px] w-[18px]" />
                       {mini && showBadge && (
-                        <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className={cn('absolute -right-1 -top-1 h-2 w-2 rounded-full', badgeColor)} />
                       )}
                     </span>
                     {!mini && item.label}
                     {!mini && showBadge && (
-                      <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-semibold text-white">
-                        {pendingNotifications}
+                      <span className={cn('ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white', badgeColor)}>
+                        {badgeCount}
                       </span>
                     )}
                   </Link>

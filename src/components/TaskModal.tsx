@@ -176,7 +176,7 @@ export function TaskModal({
 
           <div>
             <label className="label">Title</label>
-            <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. File GSTR-3B — May 2025" className={fieldCls} disabled={!editable} />
+            <input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="e.g. File GSTR-3B — May 2025" className={fieldCls} disabled={!editable} />
           </div>
 
           <div>

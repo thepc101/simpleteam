@@ -116,3 +116,8 @@ export function isValidGstin(v: string): boolean {
 export function isValidPan(v: string): boolean {
   return PAN_RE.test(v.trim().toUpperCase())
 }
+
+/** Stable conversation key for a 1:1 direct message. */
+export function dmKey(a: string, b: string): string {
+  return `dm:${[a, b].sort().join(':')}`
+}

@@ -113,12 +113,12 @@ export function ClientModal({
             </div>
             <div>
               <label className="label">GSTIN</label>
-              <input value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} placeholder="27AABCN1234A1Z5" className={cn(fieldCls, 'font-mono text-xs', gstinBad && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')} disabled={!editable} />
+              <input value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} maxLength={15} placeholder="27AABCN1234A1Z5" className={cn(fieldCls, 'font-mono text-xs', gstinBad && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')} disabled={!editable} />
               {gstinBad && <p className="mt-1 text-[11px] text-rose-500">Not a valid 15-char GSTIN</p>}
             </div>
             <div>
               <label className="label">PAN</label>
-              <input value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} placeholder="AABCN1234A" className={cn(fieldCls, 'font-mono text-xs', panBad && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')} disabled={!editable} />
+              <input value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} maxLength={10} placeholder="AABCN1234A" className={cn(fieldCls, 'font-mono text-xs', panBad && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')} disabled={!editable} />
               {panBad && <p className="mt-1 text-[11px] text-rose-500">Not a valid 10-char PAN</p>}
             </div>
             <div>
