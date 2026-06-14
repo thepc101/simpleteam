@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useApp } from '@/lib/store'
+import { BACKEND } from '@/lib/app-context'
 import { DEMO_PASSWORD } from '@/lib/seed'
 import { cn } from '@/lib/utils'
 import { Brand } from '@/components/Brand'
@@ -69,7 +70,11 @@ export default function LoginPage() {
       else {
         setPassword('')
         setMode('signin')
-        setNotice('Password reset. Sign in with your new password.')
+        setNotice(
+          BACKEND === 'supabase'
+            ? 'If that email exists, a reset link has been sent. Check your inbox.'
+            : 'Password reset. Sign in with your new password.',
+        )
       }
       return
     }
@@ -97,9 +102,19 @@ export default function LoginPage() {
       ? 'Sign in to your SimpleTeam workspace.'
       : mode === 'signup'
         ? 'Start a workspace or join one with an invite code.'
-        : 'Set a new password for your account.'
+        : BACKEND === 'supabase'
+          ? 'We’ll email you a secure password-reset link.'
+          : 'Set a new password for your account.'
   const submitLabel =
-    mode === 'signin' ? 'Sign in' : mode === 'forgot' ? 'Reset password' : joinMode === 'create' ? 'Create workspace' : 'Join workspace'
+    mode === 'signin'
+      ? 'Sign in'
+      : mode === 'forgot'
+        ? BACKEND === 'supabase'
+          ? 'Send reset link'
+          : 'Reset password'
+        : joinMode === 'create'
+          ? 'Create workspace'
+          : 'Join workspace'
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -192,6 +207,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {!(mode === 'forgot' && BACKEND === 'supabase') && (
               <div>
                 <div className="flex items-center justify-between">
                   <label className="label">{mode === 'forgot' ? 'New password' : 'Password'}</label>
@@ -216,6 +232,7 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+              )}
 
               {mode === 'signup' && joinMode === 'create' && (
                 <div>
